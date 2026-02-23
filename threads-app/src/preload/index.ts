@@ -21,7 +21,11 @@ const api = {
   getCampaigns: () => ipcRenderer.invoke('get-campaigns'),
   createCampaign: (data: any) => ipcRenderer.invoke('create-campaign', data),
   deleteCampaign: (id: string) => ipcRenderer.invoke('delete-campaign', id),
-  uploadMedia: () => ipcRenderer.invoke('upload-media')
+  uploadMedia: () => ipcRenderer.invoke('upload-media'),
+
+  // Automation APIs
+  startCheckLive: (accountId: string) => ipcRenderer.invoke('start-check-live', accountId),
+  startCampaign: (campaignId: string) => ipcRenderer.invoke('start-campaign', campaignId)
 }
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise

@@ -81,6 +81,16 @@ export function CampaignManagement() {
         }
     }
 
+    const handleStartCampaign = async (id: string) => {
+        try {
+            await window.api.startCampaign(id)
+            loadData()
+        } catch (error) {
+            console.error('Error starting campaign:', error)
+            alert('Lỗi khi khởi chạy chiến dịch!')
+        }
+    }
+
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'RUNNING': return <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-md text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20"><Play className="w-3.5 h-3.5" /> PLAYING</span>
@@ -154,12 +164,24 @@ export function CampaignManagement() {
                                             {getStatusBadge(camp.status)}
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                            <button
-                                                onClick={() => handleDelete(camp.id)}
-                                                className="text-red-400 hover:text-red-300 transition-colors"
-                                                title="Xoá chiến dịch">
-                                                <Trash2 className="h-5 w-5" />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-3">
+                                                {camp.status !== 'RUNNING' && camp.status !== 'COMPLETED' && (
+                                                    <button
+                                                        onClick={() => handleStartCampaign(camp.id)}
+                                                        className="text-emerald-400 flex items-center gap-1 hover:text-emerald-300 transition-colors"
+                                                        title="Chạy chiến dịch"
+                                                    >
+                                                        <Play className="h-4 w-4" /> <span className="text-xs">Chạy</span>
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleDelete(camp.id)}
+                                                    className="text-red-400 hover:text-red-300 transition-colors"
+                                                    title="Xoá chiến dịch"
+                                                >
+                                                    <Trash2 className="h-5 w-5" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 )

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Trash2, CheckCircle2, XCircle, AlertCircle, FileUp, FileDown } from 'lucide-react'
+import { Plus, Trash2, CheckCircle2, XCircle, AlertCircle, FileUp, FileDown, PlaySquare } from 'lucide-react'
 
 export function AccountManagement() {
     const [accounts, setAccounts] = useState<any[]>([])
@@ -62,6 +62,16 @@ export function AccountManagement() {
         if (confirm('Bạn chắc chắn muốn xoá tài khoản này?')) {
             await window.api.deleteAccount(id)
             loadAccounts()
+        }
+    }
+
+    const handleCheckLive = async (id: string) => {
+        try {
+            await window.api.startCheckLive(id)
+            loadAccounts() // Reload trạng thái
+        } catch (e) {
+            console.error(e)
+            alert('Lỗi kiểm tra account!')
         }
     }
 
@@ -144,12 +154,20 @@ export function AccountManagement() {
                                         {acc.proxy ? `${acc.proxy.host}:${acc.proxy.port}` : 'None'}
                                     </td>
                                     <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                        <button
-                                            onClick={() => handleDelete(acc.id)}
-                                            className="text-red-400 hover:text-red-300 transition-colors"
-                                            title="Xoá tài khoản">
-                                            <Trash2 className="h-5 w-5" />
-                                        </button>
+                                        <div className="flex items-center justify-end gap-3">
+                                            <button
+                                                onClick={() => handleCheckLive(acc.id)}
+                                                className="text-blue-400 flex items-center gap-1 hover:text-blue-300 transition-colors"
+                                                title="Check Live Account">
+                                                <PlaySquare className="h-4 w-4" /> <span className="text-xs">Check</span>
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(acc.id)}
+                                                className="text-red-400 hover:text-red-300 transition-colors"
+                                                title="Xoá tài khoản">
+                                                <Trash2 className="h-5 w-5" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))

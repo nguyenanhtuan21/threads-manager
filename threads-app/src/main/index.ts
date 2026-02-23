@@ -222,6 +222,20 @@ app.whenReady().then(() => {
     return savedPaths
   })
 
+  // ---- PLAYWRIGHT AUTOMATION HANDLERS ----
+  ipcMain.handle('start-check-live', async (_, accountId: string) => {
+    // Lazy import plugin Automation để không bị lỗi lúc load UI khởi động
+    const { checkAccountLive } = require('./automation/checkLive')
+    return await checkAccountLive(accountId)
+  })
+
+  ipcMain.handle('start-campaign', async (_, campaignId: string) => {
+    const { runCampaign } = require('./automation/autoPost')
+    // Gọi không await để task chạy ngầm, trả về signal đã start
+    runCampaign(campaignId).catch(console.error)
+    return true
+  })
+
   createWindow()
 
   app.on('activate', function () {

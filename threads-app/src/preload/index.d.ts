@@ -20,6 +20,8 @@ declare global {
       createCampaign: (data: any) => Promise<any>
       deleteCampaign: (id: string) => Promise<any>
       uploadMedia: () => Promise<string[]>
+      startCheckLive: (accountId: string) => Promise<boolean>
+      startCampaign: (campaignId: string) => Promise<boolean>
     }
   }
 }
