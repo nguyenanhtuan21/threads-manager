@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Cấu hình data source sqlite
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Group {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  color       String?   // Mã màu hiển thị trên UI
+  accounts    Account[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Proxy {
+  id        String    @id @default(cuid())
+  host      String
+  port      Int
+  username  String?
+  password  String?
+  protocol  String    @default("http") // http, https, socks5
+  status    String    @default("ACTIVE") // ACTIVE, DEAD, ERROR
+  accounts  Account[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Account {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  password    String
+  status      String   @default("LIVE") // LIVE, DIE, ERROR
+  twoFactor   String?  // 2FA code secret (optional)
+  cookies     String?  // JSON string
+  userAgent   String?  // Fingerprint UA
+  
+  groupId     String?
+  group       Group?   @relation(fields: [groupId], references: [id])
+  
+  proxyId     String?
+  proxy       Proxy?   @relation(fields: [proxyId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations to campaigns
+  campaigns   CampaignAccount[]
+}
+
+model Post {
+  id          String    @id @default(cuid())
+  content     String    // Text content của bài đăng
+  mediaUrls   String?   // JSON string chứa danh sách đường dẫn file ảnh/video cục bộ
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  campaigns   Campaign[]
+}
+
+model Campaign {
+  id          String    @id @default(cuid())
+  name        String    
+  status      String    @default("DRAFT") // DRAFT, RUNNING, COMPLETED, STOPPED, ERROR
+  
+  postId      String
+  post        Post      @relation(fields: [postId], references: [id])
+  
+  // Cấu hình runtime
+  delayMin    Int       @default(30) // Giây dãn cách tối thiểu
+  delayMax    Int       @default(60) // Giây dãn cách tối đa
+  scheduleAt  DateTime? // Nếu null -> chạy ngay lập tức
+  
+  accounts    CampaignAccount[]
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model CampaignAccount {
+  id          String   @id @default(cuid())
+  
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  accountId   String
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  
+  status      String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  errorLog    String?
+  postedUrl   String?  // Link bài viết trên Threads nếu thành công
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([campaignId, accountId])
+}
