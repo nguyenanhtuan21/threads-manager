@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'">
+    <title>Hello World!</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f3f4f6;
+        color: #1f2937;
+      }
+      h1 {
+        color: #2563eb;
+      }
+      .versions {
+        margin-top: 20px;
+        padding: 15px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Hello World từ Electron! 👋</h1>
+    <div class="versions">
+      <p>Ứng dụng đang sử dụng:</p>
+      <ul>
+        <li>Node.js: <span id="node-version"></span></li>
+        <li>Chromium: <span id="chrome-version"></span></li>
+        <li>Electron: <span id="electron-version"></span></li>
+      </ul>
+    </div>
+  </body>
+</html>
