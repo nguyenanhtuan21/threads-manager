@@ -25,7 +25,17 @@ const api = {
 
   // Automation APIs
   startCheckLive: (accountId: string) => ipcRenderer.invoke('start-check-live', accountId),
-  startCampaign: (campaignId: string) => ipcRenderer.invoke('start-campaign', campaignId)
+  startCampaign: (campaignId: string) => ipcRenderer.invoke('start-campaign', campaignId),
+
+  // Farm Campaign APIs
+  getFarmCampaigns: () => ipcRenderer.invoke('get-farm-campaigns'),
+  createFarmCampaign: (data: any) => ipcRenderer.invoke('create-farm-campaign', data),
+  deleteFarmCampaign: (id: string) => ipcRenderer.invoke('delete-farm-campaign', id),
+  startFarmCampaign: (campaignAccountId: string) => ipcRenderer.invoke('start-farm-campaign', campaignAccountId),
+
+  // Scraper & Dashboard APIs
+  startScraper: (accountIds: string[]) => ipcRenderer.invoke('start-scraper', accountIds),
+  getDashboardStats: () => ipcRenderer.invoke('get-dashboard-stats')
 }
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise

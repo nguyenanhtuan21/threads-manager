@@ -1,5 +1,4 @@
 import { AutomationEngine } from './engine'
-import { prisma } from '../db'
 
 /**
  * Chạy một chiến dịch đăng bài tự động.
@@ -11,8 +10,8 @@ import { prisma } from '../db'
  * 4. Cập nhật trạng thái SUCCESS/FAILED vào bảng CampaignAccount.
  */
 export async function runCampaign(campaignId: string): Promise<void> {
-    // Sử dụng Prisma đúng cách qua dynamic require để tránh circular dependency
-    const { prisma: db } = require('../db')
+    // Sử dụng Prisma qua import () để bundle nhận diện
+    const { prisma: db } = await import('../db')
 
     const campaign = await db.campaign.findUnique({
         where: { id: campaignId },
@@ -87,20 +86,45 @@ export async function runCampaign(campaignId: string): Promise<void> {
                     await AutomationEngine.delay(2000)
                 }
 
-                const usernameInput = page.getByLabel(/username|phone number|email/i).first()
+                // Click "Log in with username instead" nếu Threads hiện tuỳ chọn đăng nhập mới
+                const loginUsernameLink = page.locator('a[href*="/login?show_choice_screen=false"]').first()
+                    .or(page.getByRole('link', { name: /Log in with username instead|Đăng nhập bằng tên người dùng/i }).first())
+
+                if (await loginUsernameLink.isVisible().catch(() => false)) {
+                    console.log(`[Auto Post] Phát hiện trang bắt cầu chọn tài khoản, đang click Log in with username instead...`)
+                    await loginUsernameLink.click()
+                    await page.waitForURL(/threads\.net\/login/i, { timeout: 15000 }).catch(() => { })
+                    await page.waitForLoadState('networkidle')
+                    await AutomationEngine.delay(2000)
+                }
+
+                const usernameInput = page.locator('input[autocomplete="username"]').first()
+                    .or(page.getByPlaceholder(/username, phone or email/i).first())
                     .or(page.locator('input[name="username"]'))
                 await usernameInput.waitFor({ state: 'visible', timeout: 15000 })
                 await usernameInput.fill(account.username)
                 await AutomationEngine.delay(400)
 
-                const passwordInput = page.locator('input[name="password"]')
-                    .or(page.getByLabel(/password/i).first())
+                const passwordInput = page.locator('input[autocomplete="current-password"]').first()
+                    .or(page.getByPlaceholder(/password/i).first())
+                    .or(page.locator('input[name="password"]'))
                 await passwordInput.fill(account.password || '')
                 await AutomationEngine.delay(400)
 
-                await page.getByRole('button', { name: /log in|sign in/i }).first().click()
+                const loginBtn = page.locator('input[type="submit"], button[type="submit"], div[role="button"]:has-text("Log in")').first()
+                await loginBtn.click()
                 await page.waitForURL(/threads\.net\/(home|\?)/i, { timeout: 15000 }).catch(() => { })
                 await AutomationEngine.delay(2000)
+
+                // Kiểm tra nếu url vẫn ở trang login hoặc có lỗi
+                if (!(await page.url()).includes('/home') && !(await page.locator('[aria-label="New thread"]').first().isVisible().catch(() => false))) {
+                    const errorSelector = page.locator('ul.x78zum5.xdt5ytf.x3ct3a4.x193iq5w').first()
+                    let errorMsg = ''
+                    if (await errorSelector.isVisible().catch(() => false)) {
+                        errorMsg = await errorSelector.innerText().catch(() => '')
+                    }
+                    throw new Error(errorMsg.trim() || 'Đăng nhập thất bại hoặc sai mật khẩu.')
+                }
             }
 
             // === MỞ MODAL TẠO BÀI VIẾT ===

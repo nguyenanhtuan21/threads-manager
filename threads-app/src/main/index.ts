@@ -222,18 +222,88 @@ app.whenReady().then(() => {
     return savedPaths
   })
 
-  // ---- PLAYWRIGHT AUTOMATION HANDLERS ----
   ipcMain.handle('start-check-live', async (_, accountId: string) => {
-    // Lazy import plugin Automation để không bị lỗi lúc load UI khởi động
-    const { checkAccountLive } = require('./automation/checkLive')
+    // Để tránh circular hoặc load chậm, sử dụng require đúng chuẩn module bundling của electron-vite
+    const { checkAccountLive } = await import('./automation/checkLive')
     return await checkAccountLive(accountId)
   })
 
   ipcMain.handle('start-campaign', async (_, campaignId: string) => {
-    const { runCampaign } = require('./automation/autoPost')
+    const { runCampaign } = await import('./automation/autoPost')
     // Gọi không await để task chạy ngầm, trả về signal đã start
     runCampaign(campaignId).catch(console.error)
     return true
+  })
+
+  // ---- FARM CAMPAIGN IPC HANDLERS ----
+  ipcMain.handle('get-farm-campaigns', async () => {
+    return await prisma.farmCampaign.findMany({
+      include: { config: true, accounts: { include: { account: true } } },
+      orderBy: { createdAt: 'desc' }
+    })
+  })
+
+  ipcMain.handle('create-farm-campaign', async (_, data) => {
+    // data: { name, delayMin, delayMax, scheduleAt, config: object, accounts: string[] }
+    const { accounts, config, ...campaignData } = data
+    return await prisma.farmCampaign.create({
+      data: {
+        ...campaignData,
+        config: {
+          create: config
+        },
+        accounts: {
+          create: accounts.map((accountId: string) => ({ accountId }))
+        }
+      }
+    })
+  })
+
+  ipcMain.handle('delete-farm-campaign', async (_, id) => {
+    // Since config and accounts have relations/cascade, it should be fine. 
+    // Delete FarmCampaign will cascade to FarmCampaignAccount. For config, we can leave it or clean up.
+    return await prisma.farmCampaign.delete({ where: { id } })
+  })
+
+  ipcMain.handle('start-farm-campaign', async (_, campaignAccountId: string) => {
+    const { runFarmCampaignAccount } = await import('./automation/autoFarm')
+    runFarmCampaignAccount(campaignAccountId).catch(console.error)
+    return true
+  })
+
+  // ---- SCRAPER & DASHBOARD IPC HANDLERS ----
+  ipcMain.handle('start-scraper', async (_, accountIds: string[]) => {
+    const { runScraper } = await import('./automation/autoScraper')
+    runScraper(accountIds).catch(console.error)
+    return true
+  })
+
+  ipcMain.handle('get-dashboard-stats', async () => {
+    const totalAccounts = await prisma.account.count()
+    const activeAccounts = await prisma.account.count({ where: { status: 'LIVE' } })
+    const deadAccounts = await prisma.account.count({ where: { status: 'DIE' } })
+    const blockedAccounts = await prisma.account.count({ where: { status: 'ERROR' } })
+
+    const accounts = await prisma.account.findMany({
+      select: { followerCount: true, postCount: true }
+    })
+
+    let totalFollowers = 0
+    let totalPosts = 0
+
+    for (const acc of accounts) {
+      totalFollowers += acc.followerCount || 0
+      totalPosts += acc.postCount || 0
+    }
+
+    return {
+      totalAccounts,
+      activeAccounts,
+      deadAccounts,
+      blockedAccounts,
+      totalFollowers,
+      totalPosts
+    }
   })
 
   createWindow()

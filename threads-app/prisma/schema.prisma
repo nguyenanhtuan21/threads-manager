@@ -43,6 +43,11 @@ model Account {
   cookies     String?  // JSON string
   userAgent   String?  // Fingerprint UA
   
+  // Scraper Stats
+  followerCount  Int      @default(0)
+  followingCount Int      @default(0)
+  postCount      Int      @default(0)
+  
   groupId     String?
   group       Group?   @relation(fields: [groupId], references: [id])
   
@@ -54,6 +59,59 @@ model Account {
   
   // Relations to campaigns
   campaigns   CampaignAccount[]
+  farmCampaigns FarmCampaignAccount[]
+}
+
+model FarmConfig {
+  id              String         @id @default(cuid())
+  enableLike      Boolean        @default(true)
+  likeCountMin    Int            @default(5)
+  likeCountMax    Int            @default(15)
+  enableFollow    Boolean        @default(false)
+  followCountMin  Int            @default(1)
+  followCountMax  Int            @default(5)
+  scrollTimeMin   Int            @default(30) // seconds
+  scrollTimeMax   Int            @default(120) // seconds
+  
+  // Relations
+  farmCampaigns   FarmCampaign[]
+}
+
+model FarmCampaign {
+  id          String         @id @default(cuid())
+  name        String    
+  status      String         @default("DRAFT") // DRAFT, RUNNING, COMPLETED, STOPPED, ERROR
+  
+  configId    String
+  config      FarmConfig     @relation(fields: [configId], references: [id])
+  
+  // Cấu hình runtime
+  delayMin    Int            @default(30) // Giây dãn cách cấu hình tối thiểu giữa các acc
+  delayMax    Int            @default(60) // Giây dãn cách tối đa giữa các acc
+  scheduleAt  DateTime?      // Hẹn giờ chạy
+  
+  accounts    FarmCampaignAccount[]
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model FarmCampaignAccount {
+  id            String       @id @default(cuid())
+  
+  farmCampaignId String
+  farmCampaign  FarmCampaign @relation(fields: [farmCampaignId], references: [id], onDelete: Cascade)
+  
+  accountId     String
+  account       Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  
+  status        String       @default("PENDING") // PENDING, SUCCESS, FAILED
+  errorLog      String?
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([farmCampaignId, accountId])
 }
 
 model Post {

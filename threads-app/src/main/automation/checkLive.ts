@@ -71,23 +71,36 @@ export async function checkAccountLive(accountId: string): Promise<boolean> {
                 await AutomationEngine.delay(2000)
             }
 
+            // Click "Log in with username instead" nếu Threads hiện tuỳ chọn đăng nhập mới
+            const loginUsernameLink = page.locator('a[href*="/login?show_choice_screen=false"]').first()
+                .or(page.getByRole('link', { name: /Log in with username instead|Đăng nhập bằng tên người dùng/i }).first())
+
+            if (await loginUsernameLink.isVisible().catch(() => false)) {
+                console.log(`[Check Live] Phát hiện trang bắt cầu chọn tài khoản, đang click Log in with username instead...`)
+                await loginUsernameLink.click()
+                // Threads load sang trang /login mới
+                await page.waitForURL(/threads\.net\/login/i, { timeout: 15000 }).catch(() => { })
+                await page.waitForLoadState('networkidle')
+                await AutomationEngine.delay(2000)
+            }
+
             // Điền username
-            const usernameInput = page.getByLabel(/username|phone number|email/i).first()
+            const usernameInput = page.locator('input[autocomplete="username"]').first()
+                .or(page.getByPlaceholder(/username, phone or email/i).first())
                 .or(page.locator('input[name="username"]'))
-                .or(page.getByPlaceholder(/phone number, username, or email/i))
             await usernameInput.waitFor({ state: 'visible', timeout: 15000 })
             await usernameInput.fill(account.username)
             await AutomationEngine.delay(500)
 
             // Điền password
-            const passwordInput = page.getByLabel(/password/i).first()
+            const passwordInput = page.locator('input[autocomplete="current-password"]').first()
+                .or(page.getByPlaceholder(/password/i).first())
                 .or(page.locator('input[name="password"]'))
-                .or(page.getByPlaceholder(/password/i))
             await passwordInput.fill(account.password || '')
             await AutomationEngine.delay(500)
 
             // Bấm nút đăng nhập
-            const loginBtn = page.getByRole('button', { name: /log in|sign in|đăng nhập/i }).first()
+            const loginBtn = page.locator('input[type="submit"], button[type="submit"], div[role="button"]:has-text("Log in")').first()
             await loginBtn.click()
             console.log(`[Check Live] Đã bấm đăng nhập, đợi phản hồi...`)
 
@@ -108,15 +121,26 @@ export async function checkAccountLive(accountId: string): Promise<boolean> {
 
             if (!loginSuccess) {
                 // Kiểm tra xem có thông báo lỗi không
-                const errorMsg = await page.locator('[role="alert"]').textContent().catch(() => '')
-                    || await page.locator('.coreSpriteLoginWarning').textContent().catch(() => '')
+                const errorSelector = page.locator('ul.x78zum5.xdt5ytf.x3ct3a4.x193iq5w').first()
+                const errorSelectorAlt = page.locator('[role="alert"], .coreSpriteLoginWarning').first()
+
+                let errorMsg = ''
+                if (await errorSelector.isVisible().catch(() => false)) {
+                    errorMsg = await errorSelector.innerText().catch(() => '')
+                } else if (await errorSelectorAlt.isVisible().catch(() => false)) {
+                    errorMsg = await errorSelectorAlt.innerText().catch(() => '')
+                }
+
+                errorMsg = errorMsg.trim() || 'Lỗi không xác định hoặc sai mật khẩu.'
                 console.error(`[Check Live] ❌ Đăng nhập thất bại. URL: ${postLoginUrl} | Lỗi: ${errorMsg}`)
 
                 await prisma.account.update({
                     where: { id: accountId },
+                    // Có thể tạo thêm field errorLog trong Account db nếu cần, hiện tại lưu tạm vô status hoặc update riêng biệt
                     data: { status: 'ERROR' }
                 })
-                return false
+                // Cố ý throw error để caller biết nội dung
+                throw new Error(errorMsg)
             }
         }
 

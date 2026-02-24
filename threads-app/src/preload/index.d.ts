@@ -22,6 +22,14 @@ declare global {
       uploadMedia: () => Promise<string[]>
       startCheckLive: (accountId: string) => Promise<boolean>
       startCampaign: (campaignId: string) => Promise<boolean>
+
+      getFarmCampaigns: () => Promise<any[]>
+      createFarmCampaign: (data: any) => Promise<any>
+      deleteFarmCampaign: (id: string) => Promise<any>
+      startFarmCampaign: (campaignAccountId: string) => Promise<boolean>
+
+      startScraper: (accountIds: string[]) => Promise<boolean>
+      getDashboardStats: () => Promise<any>
     }
   }
 }

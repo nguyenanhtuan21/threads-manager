@@ -69,9 +69,10 @@ export function AccountManagement() {
         try {
             await window.api.startCheckLive(id)
             loadAccounts() // Reload trạng thái
-        } catch (e) {
+        } catch (e: any) {
             console.error(e)
-            alert('Lỗi kiểm tra account!')
+            alert(`Kiểm tra thất bại: ${e.message || 'Lỗi hệ thống'}`)
+            loadAccounts() // Vẫn reload phòng trường hợp status trong DB đã đổi thành ERROR
         }
     }
 
